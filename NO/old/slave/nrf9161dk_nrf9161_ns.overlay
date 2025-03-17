@@ -1,0 +1,12 @@
+&spi3 {
+    status = "okay";
+    def-char = <0x5A>;
+    cs-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>; // Pin para CS
+    compatible = "nordic,nrf-spis";
+    label = "SPI_3";
+};
+
+&gpio0 {
+    status = "okay";
+    label = "GPIO_0";
+};

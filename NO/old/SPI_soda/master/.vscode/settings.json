@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "printk.h": "c",
+        "string.h": "c",
+        "kernel.h": "c",
+        "log.h": "c",
+        "gpio.h": "c"
+    }
+}

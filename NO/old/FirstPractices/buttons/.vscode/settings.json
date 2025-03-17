@@ -1,0 +1,7 @@
+{
+    "nrf-connect.toolchain.path": "${nrf-connect.zephyrsdk:0.16.1}",
+    "files.associations": {
+        "nrf_modem_dect_phy.h": "c",
+        "dk_buttons_and_leds.h": "c"
+    }
+}

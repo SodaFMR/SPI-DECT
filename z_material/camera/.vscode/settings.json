@@ -1,0 +1,7 @@
+{
+    "nrf-connect.toolchain.path": "${nrf-connect.zephyrsdk:0.16.1}",
+    "files.associations": {
+        "nrf_modem_lib.h": "c",
+        "string.h": "c"
+    }
+}

@@ -1,0 +1,7 @@
+default: Slave_20Feb
+build_dir: C:/Users/sose/Desktop/TFG_DECT/old/LastTests_Discard/Slave_20Feb/PRUEBASOCORRO
+domains:
+  - name: Slave_20Feb
+    build_dir: C:/Users/sose/Desktop/TFG_DECT/old/LastTests_Discard/Slave_20Feb/PRUEBASOCORRO/Slave_20Feb
+flash_order:
+  - Slave_20Feb

@@ -1,0 +1,13 @@
+&spi3 {
+    compatible = "nordic,nrf-spis";  // Cambiado de nrf-spim a nrf-spis para usar modo esclavo
+    status = "okay";
+    def-char = <0xEA>;  // Valor a enviar cuando no haya datos disponibles (puedes cambiarlo)
+    label = "SPI_3";
+    cs-gpios = <&gpio0 20 GPIO_ACTIVE_LOW>;  // Chip Select en el pin 20
+};
+
+
+&gpio0 {
+    status = "okay";
+    label = "GPIO_0";
+};

@@ -3,7 +3,6 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
 #include "driver/spi_slave.h"
 #include "driver/gpio.h"
 
@@ -16,12 +15,24 @@
 #define TOTAL_BYTES 64       // Size of each block
 #define MAX_DATA_SIZE 700    // Total size of data to send
 
-static QueueHandle_t spi_queue;
+// Function to fill a block with the desired sequence
+void send_block(uint8_t *sendbuf, uint8_t block_num)
+{
+    sendbuf[0] = 0x80 | (block_num & 0x7F);  // First byte for other blocks
+    sendbuf[1] = block_num;  // Second byte with block number
 
-void IRAM_ATTR cs_interrupt_handler(void *arg);
-void send_spi_data();
+    // Fixed sequence in bytes 2 to 63
+    uint8_t sequence[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99};
+    int sequence_len = sizeof(sequence) / sizeof(sequence[0]);
 
-void configure_spi_slave() {
+    for (int j = 2; j < TOTAL_BYTES; j++)
+    {
+        sendbuf[j] = sequence[(j - 2) % sequence_len];  // Cycle through the sequence
+    }
+}
+
+void app_main(void)
+{
     printf("Initializing SPI Slave...\n");
 
     // SPI bus configuration
@@ -42,56 +53,59 @@ void configure_spi_slave() {
         .flags = 0,
     };
 
+    // Set CS as input
+    gpio_set_direction(GPIO_CS, GPIO_MODE_INPUT);
+
+    // Set DataReady pin as output
+    gpio_set_direction(GPIO_DATAREADY, GPIO_MODE_OUTPUT);
+
     // Initialize the SPI slave
     esp_err_t ret = spi_slave_initialize(SPI2_HOST, &buscfg, &slvcfg, SPI_DMA_DISABLED);
     if (ret != ESP_OK) {
         printf("Error initializing SPI Slave: %d\n", ret);
         return;
     }
-}
 
-void IRAM_ATTR cs_interrupt_handler(void *arg) {
-    int level = gpio_get_level(GPIO_CS);
-    if (level == 0) {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xQueueSendFromISR(spi_queue, &level, &xHigherPriorityTaskWoken);
-        if (xHigherPriorityTaskWoken) {
-            portYIELD_FROM_ISR();
-        }
-    }
-}
-
-void send_spi_data() {
     uint8_t sendbuf[TOTAL_BYTES];
     uint8_t recvbuf[TOTAL_BYTES];
-    uint8_t block_num = 0;
+    uint8_t block_num = 0; // Block number to send
     uint16_t total_bytes_sent = 0;
 
-    while (1) {
-        // Set Data Ready to 1
-        gpio_set_level(GPIO_DATAREADY, 1);
-        printf("Data Ready set to 1. Waiting for CS LOW...\n");
+    printf("Waiting for SPI transaction...\n");
 
-        int dummy;
-        xQueueReceive(spi_queue, &dummy, portMAX_DELAY);
-        gpio_set_level(GPIO_DATAREADY, 0);
+    while (1)
+    {
+        // Wait until CS is low
+        while (gpio_get_level(GPIO_CS) == 1)
+        {
+            vTaskDelay(1 / portTICK_PERIOD_MS);
+        }
 
-        printf("CS LOW detected. Starting transmission...\n");
-
-        while (total_bytes_sent < MAX_DATA_SIZE) {
-            sendbuf[0] = 0x80 | (block_num & 0x7F);
-            sendbuf[1] = block_num;
-            memset(&sendbuf[2], 0xAA, TOTAL_BYTES - 2);
+        while (total_bytes_sent < MAX_DATA_SIZE)
+        {
+            send_block(sendbuf, block_num);  // Fill the block
 
             memset(recvbuf, 0, sizeof(recvbuf));
 
-            spi_slave_transaction_t t = {
-                .length = 8 * TOTAL_BYTES,
-                .tx_buffer = sendbuf,
-                .rx_buffer = recvbuf
-            };
+            // Activate DataReady signal to indicate that data is ready
+            gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
 
-            esp_err_t ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
+            spi_slave_transaction_t t;
+            memset(&t, 0, sizeof(t));
+            t.length = 8 * TOTAL_BYTES;
+            t.tx_buffer = sendbuf;
+            t.rx_buffer = recvbuf;
+
+            printf("Sending block %d: \n", block_num);
+            for (int j = 0; j < TOTAL_BYTES; j++) {
+                printf("%02X ", sendbuf[j]);
+                if ((j + 1) % 16 == 0) {
+                    printf("\n");
+                }
+            }
+            printf("- - - - - - - - - - - - - - - - - - - - - - - -\n");
+
+            ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Block %d sent successfully.\n", block_num);
             } else {
@@ -100,24 +114,37 @@ void send_spi_data() {
 
             total_bytes_sent += TOTAL_BYTES;
             block_num++;
+
+            vTaskDelay(500 / portTICK_PERIOD_MS);
         }
 
-        printf("Waiting 5 seconds before next transmission...\n");
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        uint16_t remaining_bytes = MAX_DATA_SIZE % TOTAL_BYTES;
+        if (remaining_bytes > 0) {
+            printf("Sending %d remaining bytes...\n", remaining_bytes);
+
+            send_block(sendbuf, block_num);
+            memset(&sendbuf[remaining_bytes], 0, TOTAL_BYTES - remaining_bytes);
+
+            memset(recvbuf, 0, sizeof(recvbuf));
+
+            spi_slave_transaction_t t;
+            memset(&t, 0, sizeof(t));
+            t.length = 8 * remaining_bytes;
+            t.tx_buffer = sendbuf;
+            t.rx_buffer = recvbuf;
+
+            ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
+            if (ret == ESP_OK) {
+                printf("Remaining bytes sent successfully.\n");
+                // After sending the block, deactivate the DataReady signal
+            gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
+            } else {
+                printf("Error in SPI transaction\n");
+            }
+
+            block_num++;
+        }
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-}
-
-void app_main(void) {
-    gpio_set_direction(GPIO_DATAREADY, GPIO_MODE_OUTPUT);
-    gpio_set_level(GPIO_DATAREADY, 0);
-
-    gpio_set_direction(GPIO_CS, GPIO_MODE_INPUT);
-    gpio_set_intr_type(GPIO_CS, GPIO_INTR_NEGEDGE);
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(GPIO_CS, cs_interrupt_handler, NULL);
-
-    spi_queue = xQueueCreate(10, sizeof(int));
-    configure_spi_slave();
-
-    send_spi_data();
 }

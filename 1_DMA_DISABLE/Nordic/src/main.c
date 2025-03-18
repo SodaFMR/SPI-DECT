@@ -108,6 +108,6 @@ void main(void) {
 
     // Main loop, execution will mainly be driven by the interrupt
     while (1) {
-        k_msleep(500);
+        k_msleep(1);
     }
 }

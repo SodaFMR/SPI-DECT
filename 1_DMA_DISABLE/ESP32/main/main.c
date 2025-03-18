@@ -10,6 +10,7 @@
 #define GPIO_MISO 13
 #define GPIO_SCLK 15
 #define GPIO_CS   14
+#define GPIO_DATAREADY 16
 
 #define TOTAL_BYTES 64       // Size of each block
 #define MAX_DATA_SIZE 700    // Total size of data to send

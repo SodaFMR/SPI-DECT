@@ -7,9 +7,11 @@
 
 #define SPI_DEV_NODE DT_NODELABEL(spi3)
 
-// GPIO pin for the CS, if more slaves needed simply add more pins
+// GPIO pin for the  DataReady and CS, if more slaves needed simply add more pins
 #define SPI_CS_NODE DT_NODELABEL(gpio0)
 #define SPI_CS_PIN  7
+
+#define GPIO_DATAREADY 3
 
 // Both GPIO and SPI devices are found here
 static const struct device *spi_dev = DEVICE_DT_GET(SPI_DEV_NODE);
@@ -27,11 +29,15 @@ struct spi_config spi_cfg = {
 #define MAX_DATA_SIZE 700   // Total size of the data to receive
 
 static uint8_t recvbuf[TOTAL_BYTES] = {0};          // Buffer to store each iteration data
+//static uint8_t sendbuf[TOTAL_BYTES] = {0};        // Buffer to store the data to send if needed
 static uint8_t data_buffer[MAX_DATA_SIZE] = {0};    // Buffer to store the complete data
 static uint16_t total_bytes_received = 0;           // Counter for the received Bytes
 
 void main(void)
 {
+    // Configure the DataReady pin as input
+    gpio_pin_configure(gpio_dev, GPIO_DATAREADY, GPIO_INPUT);
+
     // Configure the CS pin as output and ensuring it is innactive
     gpio_pin_configure(gpio_dev, SPI_CS_PIN, GPIO_OUTPUT);
     gpio_pin_set(gpio_dev, SPI_CS_PIN, 1);
@@ -46,6 +52,17 @@ void main(void)
         .count = 1
     };
 
+    // Here the transmission buffer could be configured if needed
+/*    
+    struct spi_buf tx_buf = {
+        .buf = sendbuf,
+        .len = TOTAL_BYTES
+    };
+    struct spi_buf_set tx_buf_set = {
+        .buffers = &tx_buf,
+        .count = 1
+    };
+*/
     printk("Initializing SPI in nRF9161 as Master...\n");
 
     // Check the devices to be ready

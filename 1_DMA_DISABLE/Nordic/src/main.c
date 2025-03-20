@@ -33,14 +33,16 @@ static uint8_t recvbuf[TOTAL_BYTES] = {0};          // Buffer to store each iter
 static uint8_t data_buffer[MAX_DATA_SIZE] = {0};    // Buffer to store the complete data
 static uint16_t total_bytes_received = 0;           // Counter for the received Bytes
 
-void main(void)
+void pin_isr(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    // Configure the DataReady pin as input
-    gpio_pin_configure(gpio_dev, GPIO_DATAREADY, GPIO_INPUT);
+    printk("DataReady pin is high, starting the SPI communication\n");
+    receive_data();
+}
 
-    // Configure the CS pin as output and ensuring it is innactive
-    gpio_pin_configure(gpio_dev, SPI_CS_PIN, GPIO_OUTPUT);
-    gpio_pin_set(gpio_dev, SPI_CS_PIN, 1);
+void receive_data(void) 
+{
+    // Variable to track the received bytes
+    uint16_t total_bytes_received = MAX_DATA_SIZE;
 
     // Configure the reception buffer
     struct spi_buf rx_buf = {
@@ -63,28 +65,9 @@ void main(void)
         .count = 1
     };
 */
-    printk("Initializing SPI in nRF9161 as Master...\n");
-
-    // Check the devices to be ready
-    if (!device_is_ready(spi_dev)) {
-        printk("Error: SPI3 is not ready.\n");
-        return;
-    }
-    if (!device_is_ready(gpio_dev)) {
-        printk("Error: GPIO is not ready.\n");
-        return;
-    }
-
     // Start of the SPI reception
     while (total_bytes_received < MAX_DATA_SIZE) {
-        if(gpio_pin_get(gpio_dev, GPIO_DATAREADY) == 0){
-            printk("DataReady pin is low, waiting for the signal to be high\n");
-            while(gpio_pin_get(gpio_dev, GPIO_DATAREADY) == 0){
-                k_msleep(1);
-            }
-        }
-        printk("DataReady pin is high, starting the SPI communication\n");
-        
+
         // Clean the buffer on each iteration
         memset(recvbuf, 0, TOTAL_BYTES);
 
@@ -129,5 +112,31 @@ void main(void)
         }
         // 500 ms delay on each iteration
         k_msleep(500);
+    }
+}
+
+void main(void)
+{
+    // Configure the DataReady pin as input
+    gpio_pin_configure(gpio_dev, GPIO_DATAREADY, GPIO_INPUT);
+
+    // Configure the CS pin as output and ensuring it is innactive
+    gpio_pin_configure(gpio_dev, SPI_CS_PIN, GPIO_OUTPUT);
+    gpio_pin_set(gpio_dev, SPI_CS_PIN, 1);
+
+    printk("Initializing SPI in nRF9161 as Master...\n");
+
+    // Check the devices to be ready
+    if (!device_is_ready(spi_dev)) {
+        printk("Error: SPI3 is not ready.\n");
+        return;
+    }
+    if (!device_is_ready(gpio_dev)) {
+        printk("Error: GPIO is not ready.\n");
+        return;
+    }
+
+    while (1) {
+        k_msleep(1);
     }
 }

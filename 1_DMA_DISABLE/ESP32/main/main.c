@@ -116,7 +116,7 @@ void app_main(void)
             printf("Bytes left to send: %d\n", bytes_to_send);
             block_num++;
 
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
             // Here the program will have reached the residual data, leaving this while loop
         }
 
@@ -127,6 +127,16 @@ void app_main(void)
 
             send_block(sendbuf, block_num);
             memset(&sendbuf[remaining_bytes], 0, TOTAL_BYTES - remaining_bytes);
+
+            // Print the residual bytes before sending
+            printf("Residual bytes to send:\n");
+            for (int i = 0; i < TOTAL_BYTES; i++) {
+                printf("%02X ", sendbuf[i]);
+                if ((i + 1) % 16 == 0) {
+                    printf("\n");
+                }
+            }
+            printf("- - - - - - - - - - - - - - - - - - - - - - - -\n");
 
             memset(recvbuf, 0, sizeof(recvbuf));
 
@@ -140,7 +150,7 @@ void app_main(void)
             if (ret == ESP_OK) {
                 printf("Remaining bytes sent successfully.\n");
                 // After sending the block, deactivate the DataReady signal
-            gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
+                gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
             } else {
                 printf("Error in SPI transaction\n");
             }

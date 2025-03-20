@@ -128,6 +128,6 @@ void main(void)
             }
         }
         // 500 ms delay on each iteration
-        k_msleep(500);
+        k_msleep(50);
     }
 }

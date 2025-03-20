@@ -26,7 +26,7 @@ struct spi_config spi_cfg = {
 
 // Buffer size and buffer to store the received data
 #define TOTAL_BYTES 65      // Maximum Bytes per iteration
-#define MAX_DATA_SIZE 700   // Total size of the data to receive
+#define MAX_DATA_SIZE 1000   // Total size of the data to receive
 
 static uint8_t recvbuf[TOTAL_BYTES] = {0};          // Buffer to store each iteration data
 //static uint8_t sendbuf[TOTAL_BYTES] = {0};        // Buffer to store the data to send if needed

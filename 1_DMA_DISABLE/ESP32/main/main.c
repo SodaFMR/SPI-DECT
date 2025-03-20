@@ -13,7 +13,7 @@
 #define GPIO_DATAREADY 16
 
 #define TOTAL_BYTES 64       // Size of each block
-#define MAX_DATA_SIZE 700    // Total size of data to send
+#define MAX_DATA_SIZE 1000    // Total size of data to send
 
 // Function to fill a block with the desired sequence
 void send_block(uint8_t *sendbuf, uint8_t block_num)
@@ -69,7 +69,7 @@ void app_main(void)
     uint8_t sendbuf[TOTAL_BYTES];
     uint8_t recvbuf[TOTAL_BYTES];
     uint8_t block_num = 0; // Block number to send
-    uint16_t total_bytes_sent = 0;
+    int16_t bytes_to_send = MAX_DATA_SIZE;     // Will be used to check the residual
 
     printf("Waiting for SPI transaction...\n");
 
@@ -81,15 +81,15 @@ void app_main(void)
             vTaskDelay(1 / portTICK_PERIOD_MS);
         }
 
-        while (total_bytes_sent < MAX_DATA_SIZE)
+        while (bytes_to_send > 0)
         {
             send_block(sendbuf, block_num);  // Fill the block
 
             memset(recvbuf, 0, sizeof(recvbuf));
 
-            // Activate DataReady signal to indicate that data is ready
+            // Better to activate it and use it in other context, not here
             gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
-
+            
             spi_slave_transaction_t t;
             memset(&t, 0, sizeof(t));
             t.length = 8 * TOTAL_BYTES;
@@ -112,12 +112,15 @@ void app_main(void)
                 printf("Error in SPI transaction\n");
             }
 
-            total_bytes_sent += TOTAL_BYTES;
+            bytes_to_send -= TOTAL_BYTES;
+            printf("Bytes left to send: %d\n", bytes_to_send);
             block_num++;
 
             vTaskDelay(500 / portTICK_PERIOD_MS);
+            // Here the program will have reached the residual data, leaving this while loop
         }
 
+        // Send the residual bytes
         uint16_t remaining_bytes = MAX_DATA_SIZE % TOTAL_BYTES;
         if (remaining_bytes > 0) {
             printf("Sending %d remaining bytes...\n", remaining_bytes);
@@ -144,7 +147,7 @@ void app_main(void)
 
             block_num++;
         }
-
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        break;  // Exit the loop after sending the residual data
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

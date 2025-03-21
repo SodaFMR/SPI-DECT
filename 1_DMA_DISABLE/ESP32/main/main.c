@@ -13,7 +13,7 @@
 #define GPIO_DATAREADY 16
 
 #define TOTAL_BYTES 64       // Size of each block
-#define MAX_DATA_SIZE 700    // Total size of data to send
+#define MAX_DATA_SIZE 4000    // Total size of data to send
 
 // Function to fill a block with the desired sequence
 void send_block(uint8_t *sendbuf, uint8_t block_num)

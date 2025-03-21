@@ -115,7 +115,7 @@ void app_main(void)
             printf("Bytes left to send: %d\n", bytes_to_send);
             block_num++;
 
-            vTaskDelay(500 / portTICK_PERIOD_MS);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
             // Here the program will have reached the residual data, leaving this while loop
         }
 

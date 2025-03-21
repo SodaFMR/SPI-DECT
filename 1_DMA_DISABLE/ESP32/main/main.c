@@ -87,9 +87,6 @@ void app_main(void)
 
             memset(recvbuf, 0, sizeof(recvbuf));
 
-            // Better to activate it and use it in other context, not here
-            gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
-            
             spi_slave_transaction_t t;
             memset(&t, 0, sizeof(t));
             t.length = 8 * TOTAL_BYTES;
@@ -105,6 +102,8 @@ void app_main(void)
             }
             printf("- - - - - - - - - - - - - - - - - - - - - - - -\n");
 
+            gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
+
             ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Block %d sent successfully.\n", block_num);
@@ -116,7 +115,7 @@ void app_main(void)
             printf("Bytes left to send: %d\n", bytes_to_send);
             block_num++;
 
-            vTaskDelay(50 / portTICK_PERIOD_MS);
+            vTaskDelay(500 / portTICK_PERIOD_MS);
             // Here the program will have reached the residual data, leaving this while loop
         }
 
@@ -125,7 +124,7 @@ void app_main(void)
         if (remaining_bytes > 0) {
             printf("Sending %d remaining bytes...\n", remaining_bytes);
 
-            send_block(sendbuf, block_num);
+            send_block(sendbuf, 0xFF);
             memset(&sendbuf[remaining_bytes], 0, TOTAL_BYTES - remaining_bytes);
 
             // Print the residual bytes before sending
@@ -149,7 +148,6 @@ void app_main(void)
             ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Remaining bytes sent successfully.\n");
-                // After sending the block, deactivate the DataReady signal
                 gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
             } else {
                 printf("Error in SPI transaction\n");
@@ -157,6 +155,7 @@ void app_main(void)
 
             block_num++;
         }
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;  // Exit the loop after sending the residual data
         // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

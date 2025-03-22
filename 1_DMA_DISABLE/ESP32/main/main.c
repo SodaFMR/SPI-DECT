@@ -145,15 +145,15 @@ void app_main(void)
             t.tx_buffer = sendbuf;
             t.rx_buffer = recvbuf;
 
+            gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
+            
             ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Remaining bytes sent successfully.\n");
-                gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
             } else {
                 printf("Error in SPI transaction\n");
             }
-
-            block_num++;
+            remaining_bytes = 0;
         }
         // vTaskDelay(1000 / portTICK_PERIOD_MS);
         break;  // Exit the loop after sending the residual data

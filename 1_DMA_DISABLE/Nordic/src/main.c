@@ -130,21 +130,24 @@ void main(void)
             // 500 ms delay on each iteration
             k_msleep(5);
         }
-
-        uint16_t remaining_bytes = MAX_DATA_SIZE % TOTAL_BYTES;
-        if (remaining_bytes > 0) {
-            printk("Remaining bytes: %d\n", remaining_bytes);
-            memcpy(&data_buffer[total_bytes_received], &recvbuf[1], remaining_bytes);
-            // Print the received block to check the correct reception
-            //printk("Received data (block %d):\n", seq_num);
-            for (int i = 0; i < remaining_bytes; i++) {
-                printk("%02X ", recvbuf[i + 1]);
-                if ((i + 1) % 16 == 0) {
-                    printk("\n");
+        if(gpio_pin_get(gpio_dev, GPIO_DATAREADY) == 0){
+            printk("DataReady pin is low, waiting for the next data\n");
+            break;
+        } else {
+            uint16_t remaining_bytes = MAX_DATA_SIZE % TOTAL_BYTES;
+            if (remaining_bytes > 0) {
+                printk("Remaining bytes: %d\n", remaining_bytes);
+                memcpy(&data_buffer[total_bytes_received], &recvbuf[1], remaining_bytes);
+                // Print the received block to check the correct reception
+                //printk("Received data (block %d):\n", seq_num);
+                for (int i = 0; i < remaining_bytes; i++) {
+                    printk("%02X ", recvbuf[i + 1]);
+                    if ((i + 1) % 16 == 0) {
+                        printk("\n");
+                    }
                 }
+                printk("\n- - - - - - - - - - - - - - - - - - - - - - - -\n");
             }
-            printk("\n- - - - - - - - - - - - - - - - - - - - - - - -\n");
-
         }
         break;
     }

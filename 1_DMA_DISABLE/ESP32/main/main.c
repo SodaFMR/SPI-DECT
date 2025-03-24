@@ -6,10 +6,10 @@
 #include "driver/spi_slave.h"
 #include "driver/gpio.h"
 
-#define GPIO_MOSI 12
-#define GPIO_MISO 13
-#define GPIO_SCLK 15
-#define GPIO_CS   14
+#define GPIO_MOSI 23
+#define GPIO_MISO 19
+#define GPIO_SCLK 18
+#define GPIO_CS   5
 #define GPIO_DATAREADY 16
 
 #define TOTAL_BYTES 64       // Size of each block
@@ -60,7 +60,7 @@ void app_main(void)
     gpio_set_direction(GPIO_DATAREADY, GPIO_MODE_OUTPUT);
 
     // Initialize the SPI slave
-    esp_err_t ret = spi_slave_initialize(SPI2_HOST, &buscfg, &slvcfg, SPI_DMA_DISABLED);
+    esp_err_t ret = spi_slave_initialize(SPI3_HOST, &buscfg, &slvcfg, SPI_DMA_DISABLED);
     if (ret != ESP_OK) {
         printf("Error initializing SPI Slave: %d\n", ret);
         return;
@@ -104,7 +104,7 @@ void app_main(void)
 
             gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
 
-            ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
+            ret = spi_slave_transmit(SPI3_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Block %d sent successfully.\n", block_num);
             } else {
@@ -115,7 +115,7 @@ void app_main(void)
             printf("Bytes left to send: %d\n", bytes_to_send);
             block_num++;
 
-            vTaskDelay(5 / portTICK_PERIOD_MS);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
             // Here the program will have reached the residual data, leaving this while loop
         }
 
@@ -147,7 +147,7 @@ void app_main(void)
 
             gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
             
-            ret = spi_slave_transmit(SPI2_HOST, &t, portMAX_DELAY);
+            ret = spi_slave_transmit(SPI3_HOST, &t, portMAX_DELAY);
             if (ret == ESP_OK) {
                 printf("Remaining bytes sent successfully.\n");
             } else {

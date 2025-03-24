@@ -19,7 +19,7 @@ static const struct device *gpio_dev = DEVICE_DT_GET(SPI_CS_NODE);
 
 // Configuration for the SPI device
 struct spi_config spi_cfg = {
-    .frequency = 20000000,
+    .frequency = 32000000,
     .operation = SPI_OP_MODE_MASTER | SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_HOLD_ON_CS,   // Mode 0, CPOL=0, CPHA=0, Keeps CS Low until the end of the transaction
     .slave = 0,
 };
@@ -128,7 +128,7 @@ void main(void)
                 }
             }
             // 500 ms delay on each iteration
-            k_msleep(1000);
+            k_msleep(50);
         }
         if(gpio_pin_get(gpio_dev, GPIO_DATAREADY) == 0){
             printk("DataReady pin is low, waiting for the next data\n");

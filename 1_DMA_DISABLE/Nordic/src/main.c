@@ -127,7 +127,7 @@ void main(void)
 
                 }
             }
-            // 500 ms delay on each iteration
+            // 50 ms delay on each iteration
             k_msleep(50);
         }
         if(gpio_pin_get(gpio_dev, GPIO_DATAREADY) == 0){

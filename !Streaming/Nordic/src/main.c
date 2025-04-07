@@ -1,5 +1,3 @@
-// funciona.c adaptado para control manual de CS y verificación de CRC por bloque
-
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/spi.h>

@@ -16,11 +16,16 @@
 #define GPIO_CS   5
 #define GPIO_DATAREADY 16
 
+<<<<<<< HEAD
 #define TOTAL_BYTES 64
 #define HEADER_SIZE 1
 #define CRC_SIZE 2
 #define PAYLOAD_SIZE (TOTAL_BYTES - HEADER_SIZE - CRC_SIZE)
 #define MAX_DATA_SIZE 4000
+=======
+#define TOTAL_BYTES 64       // Size of each block
+#define MAX_DATA_SIZE 4000    // Total size of data to send
+>>>>>>> 486ca3ed37f137a260fb34ffaa5f4beddc757a65
 
 static const char *TAG = "SPI_Slave";
 
@@ -149,9 +154,112 @@ void app_main() {
     TaskHandle_t spi_task_handle;
     xTaskCreate(spi_task, "spi_task", 4096, NULL, 5, &spi_task_handle);
 
+<<<<<<< HEAD
     gpio_install_isr_service(0);
     gpio_isr_handler_add(GPIO_CS, cs_isr_handler, spi_task_handle);
 
     ESP_LOGI(TAG, "SPI Slave ready. Data format:");
     ESP_LOGI(TAG, "Header: 1xxx xxxx | Payload: 61 bytes | CRC-16: 2 bytes");
+=======
+    // Initialize the SPI slave
+    esp_err_t ret = spi_slave_initialize(SPI3_HOST, &buscfg, &slvcfg, SPI_DMA_DISABLED);
+    if (ret != ESP_OK) {
+        printf("Error initializing SPI Slave: %d\n", ret);
+        return;
+    }
+
+    uint8_t sendbuf[TOTAL_BYTES];
+    uint8_t recvbuf[TOTAL_BYTES];
+    uint8_t block_num = 0; // Block number to send
+    int16_t bytes_to_send = MAX_DATA_SIZE;     // Will be used to check the residual
+
+    printf("Waiting for SPI transaction...\n");
+
+    while (1)
+    {
+        // Wait until CS is low
+        while (gpio_get_level(GPIO_CS) == 1)
+        {
+            vTaskDelay(1 / portTICK_PERIOD_MS);
+        }
+
+        while (bytes_to_send > 0)
+        {
+            send_block(sendbuf, block_num);  // Fill the block
+
+            memset(recvbuf, 0, sizeof(recvbuf));
+
+            spi_slave_transaction_t t;
+            memset(&t, 0, sizeof(t));
+            t.length = 8 * TOTAL_BYTES;
+            t.tx_buffer = sendbuf;
+            t.rx_buffer = recvbuf;
+
+            printf("Sending block %d: \n", block_num);
+            for (int j = 0; j < TOTAL_BYTES; j++) {
+                printf("%02X ", sendbuf[j]);
+                if ((j + 1) % 16 == 0) {
+                    printf("\n");
+                }
+            }
+            printf("- - - - - - - - - - - - - - - - - - - - - - - -\n");
+
+            gpio_set_level(GPIO_DATAREADY, 1);  // Set DataReady to 1 to signal that data is available for the master
+
+            ret = spi_slave_transmit(SPI3_HOST, &t, portMAX_DELAY);
+            if (ret == ESP_OK) {
+                printf("Block %d sent successfully.\n", block_num);
+            } else {
+                printf("Error in SPI transaction\n");
+            }
+
+            bytes_to_send -= TOTAL_BYTES;
+            printf("Bytes left to send: %d\n", bytes_to_send);
+            block_num++;
+
+            vTaskDelay(50 / portTICK_PERIOD_MS);
+            // Here the program will have reached the residual data, leaving this while loop
+        }
+
+        // Send the residual bytes
+        uint16_t remaining_bytes = MAX_DATA_SIZE % TOTAL_BYTES;
+        if (remaining_bytes > 0) {
+            printf("Sending %d remaining bytes...\n", remaining_bytes);
+
+            send_block(sendbuf, 0xFF);
+            memset(&sendbuf[remaining_bytes], 0, TOTAL_BYTES - remaining_bytes);
+
+            // Print the residual bytes before sending
+            printf("Residual bytes to send:\n");
+            for (int i = 0; i < TOTAL_BYTES; i++) {
+                printf("%02X ", sendbuf[i]);
+                if ((i + 1) % 16 == 0) {
+                    printf("\n");
+                }
+            }
+            printf("- - - - - - - - - - - - - - - - - - - - - - - -\n");
+
+            memset(recvbuf, 0, sizeof(recvbuf));
+
+            spi_slave_transaction_t t;
+            memset(&t, 0, sizeof(t));
+            t.length = 8 * remaining_bytes;
+            t.tx_buffer = sendbuf;
+            t.rx_buffer = recvbuf;
+
+            gpio_set_level(GPIO_DATAREADY, 0);  // Set DataReady to 0 after sending the data
+            
+            ret = spi_slave_transmit(SPI3_HOST, &t, portMAX_DELAY);
+            if (ret == ESP_OK) {
+                printf("Remaining bytes sent successfully.\n");
+            } else {
+                printf("Error in SPI transaction\n");
+            }
+            remaining_bytes = 0;
+        }
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+        break;  // Exit the loop after sending the residual data
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+>>>>>>> 486ca3ed37f137a260fb34ffaa5f4beddc757a65
 }

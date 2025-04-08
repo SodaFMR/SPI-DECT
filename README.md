@@ -14,7 +14,6 @@ This folder contains a **rudimentary but functional SPI communication prototype*
 
 #### ✅ Status:
 - **Fully functional** for low-frequency transfers.
-- Uses CRC-16 for basic data integrity verification, but there is still room for improvement.
 - Verified to work reliably for proof-of-concept setups.
 
 #### ⚙️ Configuration:
